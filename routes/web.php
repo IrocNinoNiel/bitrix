@@ -18,4 +18,4 @@ $router->get('/', function () use ($router) {
 });
 
 $router->get('/api/projects', 'BitrixController@getAllProject');
-$router->get('/api/estimates', 'BitrixController@getAllProjectEstimate');
+$router->get('/api/estimates', 'BitrixController@getProjectEstimate');
