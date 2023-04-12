@@ -80,7 +80,7 @@ class BitrixController extends Controller
                 $totalTime += $elapsedItem['SECONDS'];
             }
 
-            // Get the estimate Date 
+            // Get the estimate Date
             $startDate = ($task['dateStart'] == null) ? $task['createdDate'] : $task['dateStart'];
             if ($task['deadline'] == null) {
                 $estimate = 0;
@@ -98,41 +98,57 @@ class BitrixController extends Controller
             // Subtract actual to estimate
             $remainingHours = $this->calculateRemainingHours($totalConvert, $estimate);
 
-            array_push($list, 
+            array_push($list,
                 [
-                    'task_id' => $taskId, 
+                    'task_id' => $taskId,
                     'name' => $task['title'],
-                    'datestart' => $startDate , 
+                    'datestart' => $startDate ,
                     'deadline' => $task['deadline'],
-                    'actual' => $totalConvert, 
+                    'actual' => $totalConvert,
                     'estimate' => $estimate,
-                    'remaininghours' => $remainingHours
+                    'remaininghours' => $remainingHours,
+                    'totalActualTimeInSeconds' => $totalTime
                 ]
             );
-            
-        }
 
-        return response()->json(['message' => 'Project Estimate vs Actual','tasks' => $list]);
+        }
+        $totalActualProject = $this->calculateActualProject($list);
+        return response()->json(
+            [
+                'message' => 'Project Estimate vs Actual',
+                'Project ID' => $groupId,
+                'actualtime' =>$totalActualProject,
+                'estimatetime' => 0,
+                'tasks' => $list
+            ]);
 
     }
 
     private function calculateRemainingHours ($totalConvert, $estimate) {
 
-         // Convert time durations to seconds
-         $timeDuration1 = strtotime(" {$totalConvert['hours']}:{$totalConvert['minutes']}:{$totalConvert['seconds']}") - strtotime("00:00:00");
-         $timeDuration2 = strtotime(" 00:00:00") - strtotime("{$estimate}:00:00");
-    
+        $minutes = 0;
+        $seconds = 0;
 
-         // Calculate the difference in seconds
-         $timeDifference = $timeDuration2 - $timeDuration1;
- 
-         // Convert the time difference to hours, minutes, and seconds
-         $hours = floor($timeDifference / 3600);
-         $minutes = floor(($timeDifference % 3600) / 60);
-         $seconds = $timeDifference % 60;
- 
- 
-         return sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
+        $hours = (int)$estimate - (int) $totalConvert['hours'];
+        if((int)$totalConvert['minutes'] > 0) {
+            $hours = $hours-1;
+            $minutes = 60 - (int)$totalConvert['minutes'];
+
+        }
+
+        if((int)$totalConvert['seconds'] > 0) {
+           $minutes = $minutes - 1;
+           $seconds = 60 -(int)$totalConvert['seconds'];
+
+            if($minutes == 0) {
+                $minutes = 60 - 1;
+                $hours = $hours -1;
+            }
+
+        }
+
+        // Output the result
+        return ['text' => sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds), 'hours' => $hours, 'minutes' => $minutes, 'seconds' => $seconds];
 
     }
 
@@ -169,6 +185,16 @@ class BitrixController extends Controller
 
         return $total_hours;
 
+    }
+
+    private function calculateActualProject( $list ) {
+
+        $totalTime = 0;
+        foreach ($list as $stringTime) {
+            $totalTime += $stringTime['totalActualTimeInSeconds'];
+        }
+
+        return $this->secondsToTime($totalTime);
     }
 
 }
